@@ -1,0 +1,41 @@
+spring:
+  config:
+    import: optional:file:.env.dev[.properties]
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  #JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database: postgresql
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        highlight_sql: true
+        generate_statistics: false
+        open-in-view: false
+        cache:
+          use_second_level_cache: false
+
+  transaction:
+    default-timeout: 30
+
+# swagger
+springdoc:
+  default-consumes-media-type: application/json   # 기본 요청 Content-Type
+  default-produces-media-type: application/json   # 기본 응답 Content-Type
+  swagger-ui:
+    operations-sorter: alpha    # API 메서드 알파벳 순 정렬
+    tags-sorter: alpha          # API 태그 알파벳 순 정렬
+    path: /swagger-ui
+    display-request-duration: true
+    doc-expansion: none
+    filter: true
+    show-extensions: true
