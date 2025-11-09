@@ -1,0 +1,88 @@
+name: [ PROD ] CI/CD Workflow (Springboot Application to AWS)
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+
+jobs:
+  # PROD CI
+  ci:
+    # PR: dev 또는 release/* 브랜치에서 main으로 올릴 때만
+    if: |
+      (github.event_name == 'pull_request' && (github.head_ref == 'dev' || startsWith(github.head_ref, 'release/'))) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean build -x integrationTest
+
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-prod-${{ github.run_number }}
+          path: build/reports/tests/test/
+          retention-days: 30
+
+      - name: Upload Build Artifact (JAR)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-prod-${{ github.run_number }}
+          path: build/libs/*.jar
+          retention-days: 30
+
+      - name: Comment PR with CI Results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${status} **PROD CI** completed for \`${context.payload.pull_request.head.ref}\`\n\n` +
+                    `- Build: ${{ job.status }}\n` +
+                    `- Commit: ${context.payload.pull_request.head.sha.substring(0, 7)}\n` +
+                    `- Artifact: ${{ github.event.repository.name }}-prod-${{ github.run_number }}`
+            })
+
+  # PROD CD
+#  cd:
+#    needs: ci
+#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#    runs-on: ubuntu-latest
+#    environment:
+#      name: production
+#      url: https:~~
+#    steps:
+#      - name: Deploy to PROD
+#        run: echo "Deploy to PROD environment"
