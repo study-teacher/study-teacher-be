@@ -1,4 +1,4 @@
-name: [ PROD ] CI/CD Workflow (Springboot Application to AWS)
+name: PROD - CI/CD Workflow (Springboot Application to AWS)
 on:
   pull_request:
     branches:
