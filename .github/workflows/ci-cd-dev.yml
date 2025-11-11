@@ -65,12 +65,12 @@ jobs:
                     `- Commit: ${context.payload.pull_request.head.sha.substring(0, 7)}`
             })
 
-    # DEV CD
-    cd:
-      needs: ci
-      # pull 요청이 dev에 merge 되었을 때 아래 steps를 실행
-      if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev'
-      runs-on: ubuntu-latest
+  # DEV CD
+  cd:
+    needs: ci
+    # pull 요청이 dev에 merge 되었을 때 아래 steps를 실행
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev'
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
