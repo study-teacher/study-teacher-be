@@ -12,6 +12,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+  workflow_dispatch:
+
 
 jobs:
   # DEV CI
@@ -50,13 +52,6 @@ jobs:
           path: build/reports/tests/test
           retention-days: 7
 
-      - name: Upload Build Artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name }}-dev-${{ github.run_number }}
-          path: build/libs/*.jar
-          retention-days: 7
 
       - name: Comment PR with CI Results
         if: always()
@@ -76,24 +71,51 @@ jobs:
     # DEV CD
     cd:
       needs: ci
-      if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+      # pull 요청이 dev에 merge 되었을 때 아래 steps를 실행
+      if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev'
       runs-on: ubuntu-latest
 
     steps:
-      - name: Download Build Artifact
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifact   # CI Job에서 빌드했던 jar 파일 가져오기
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-dev-${{ github.run_number }}
+          path: ./artifact
 
-      - name: Deploy to DEV Environment
+      - name: Get Current Time
+        id: current-time
         run: |
-          echo "🚀 Deploying to DEV environment..."
-          echo "Artifact: $(ls -lh *.jar)"
-          # 실제 배포 명령어 추가
-          # 예: scp, aws s3 cp, docker build & push 등
+          CURRENT_TIME=$(TZ=Asia/Seoul date +'%Y-%m-%d-%H-%M-%S')
+          echo "formattedTime=$CURRENT_TIME" >> $GITHUB_OUTPUT
+          echo "📅 Current Time (KST): $CURRENT_TIME"
+
+      - name: Generate deployment package
+        run: |
+          mkdir -p deploy
+          cp artifact/*.jar deploy/application.jar
+          cp Procfile deploy/Procfile
+          cp -r .ebextensions-dev deploy/.ebextensions
+          cp -r .platform deploy/.platform
+          cd deploy && zip -r deploy.zip .
+
+      - name: Deploy to AWS Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ vars.APPLICATION_NAME }}
+          environment_name: ${{ vars.APPLICATION_ENV_NAME }}
+          version_label: github-action-${{ steps.current-time.outputs.formattedTime }}
+          region: ${{ vars.AWS_REGION }}
+          deployment_package: deploy.zip
+          wait_for_deployment: false
 
       - name: Notify Deployment Success
         if: success()
         run: |
           echo "✅ DEV deployment completed successfully!"
-          echo "Deployed commit: ${{ github.sha }}"
+          echo "🏷️ Version: github-action-${{ steps.current-time.outputs.formattedTime }}"
+          echo "📝 Deployed commit: ${{ github.sha }}"
