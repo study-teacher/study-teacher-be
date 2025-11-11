@@ -18,10 +18,8 @@ on:
 jobs:
   # DEV CI
   ci:
-    # cicd/* 브랜치에서 dev로 PR을 올릴 때만
-    if: |
-      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'cicd/')) ||
-      github.event_name == 'push'
+    # 모든 브랜치에서 dev로 PR을 올릴 때만
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -49,9 +47,8 @@ jobs:
           path: build/reports/tests/test
           retention-days: 7
 
-
       - name: Comment PR with CI Results
-        if: always()
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
