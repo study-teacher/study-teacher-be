@@ -39,10 +39,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew clean build -x integrationTest
-
-      - name: Run Unit Tests
-        run: ./gradlew test
+        run: ./gradlew clean build
 
       - name: Upload Test Reports
         if: always()
