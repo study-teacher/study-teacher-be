@@ -19,7 +19,9 @@ jobs:
   # DEV CI
   ci:
     # 모든 브랜치에서 dev로 PR을 올릴 때만
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' || 
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
 
     steps:
@@ -65,8 +67,8 @@ jobs:
   # DEV CD
   cd:
     needs: ci
-    # pull 요청이 dev에 merge 되었을 때 아래 steps를 실행
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'dev'
+    # dev 브랜치에 push되었을 때만 (PR merge 포함)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
 
     steps:
